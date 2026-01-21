@@ -17,7 +17,7 @@ export const clips: Clip[] = [
     title: "여정의 시작",
     country: "Korea",
     city: "Incheon",
-    landmark: "Tiber River",
+    landmark: "Incheon Airport",
     subtitle: "여행의 설레임을 담고 출발",
     videoSrc: "/swtal_s/video/00-intro.mp4",
     theme: "intro"
