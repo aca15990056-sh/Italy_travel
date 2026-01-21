@@ -498,33 +498,38 @@ export default function TravelPlayer() {
       return {
         duration: TRANSITION_MS / 1000,
         active: { opacity: 1 },
-        inactive: { opacity: 0 }
+        inactive: { opacity: 0 },
+        ease: "easeInOut" as const
       };
     }
     switch (transitionType) {
       case "transfer":
         return {
-          duration: 0.9,
+          duration: 1.1,
           active: { opacity: 1, scale: 1, x: 0, filter: "blur(0px)" },
-          inactive: { opacity: 0, scale: 1.08, x: 60, filter: "blur(10px)" }
+          inactive: { opacity: 0, scale: 1.06, x: 40, filter: "blur(8px)" },
+          ease: "easeInOut" as const
         };
       case "swipe":
         return {
-          duration: 0.9,
+          duration: 1.0,
           active: { opacity: 1, x: 0, filter: "blur(0px)" },
-          inactive: { opacity: 0, x: 80, filter: "blur(8px)" }
+          inactive: { opacity: 0, x: 60, filter: "blur(6px)" },
+          ease: "easeInOut" as const
         };
       case "country":
         return {
-          duration: 0.8,
+          duration: 1.0,
           active: { opacity: 1, scale: 1, y: 0, filter: "blur(0px)" },
-          inactive: { opacity: 0, scale: 0.98, y: -20, filter: "blur(8px)" }
+          inactive: { opacity: 0, scale: 0.99, y: -12, filter: "blur(6px)" },
+          ease: "easeInOut" as const
         };
       default:
         return {
-          duration: TRANSITION_MS / 1000,
+          duration: 1.0,
           active: { opacity: 1, scale: 1, filter: "blur(0px)" },
-          inactive: { opacity: 0, scale: 1, filter: "blur(6px)" }
+          inactive: { opacity: 0, scale: 1, filter: "blur(6px)" },
+          ease: "easeInOut" as const
         };
     }
   }, [prefersReducedMotion, transitionType]);
@@ -538,7 +543,8 @@ export default function TravelPlayer() {
         <motion.div
           className="absolute inset-0"
           animate={activeLayer === "A" ? transitionPreset.active : transitionPreset.inactive}
-          transition={{ duration: transitionPreset.duration, ease: "easeOut" }}
+          initial={{ opacity: 0 }}
+          transition={{ duration: transitionPreset.duration, ease: transitionPreset.ease }}
         >
           <video
             ref={videoARef}
@@ -552,7 +558,8 @@ export default function TravelPlayer() {
         <motion.div
           className="absolute inset-0"
           animate={activeLayer === "B" ? transitionPreset.active : transitionPreset.inactive}
-          transition={{ duration: transitionPreset.duration, ease: "easeOut" }}
+          initial={{ opacity: 0 }}
+          transition={{ duration: transitionPreset.duration, ease: transitionPreset.ease }}
         >
           <video
             ref={videoBRef}
