@@ -14,7 +14,7 @@ const FALLBACK_BGM_URL =
   "https://assets.mixkit.co/music/preview/mixkit-forest-trek-117.mp3";
 
 type Layer = "A" | "B";
-type TransitionType = "default" | "country" | "transfer";
+type TransitionType = "default" | "country" | "transfer" | "swipe";
 
 export default function TravelPlayer() {
   const prefersReducedMotion = useReducedMotion();
@@ -101,6 +101,7 @@ export default function TravelPlayer() {
       const next = clips[targetIndex];
       if (!current || !next) return "default";
       if (current.theme === "intro" || next.theme === "outro") return "default";
+      if (targetIndex === 5) return "swipe";
       if (next.theme === "transfer") return "transfer";
       if (current.country !== next.country || current.city !== next.city) return "country";
       return "default";
@@ -457,6 +458,12 @@ export default function TravelPlayer() {
           duration: 0.9,
           active: { opacity: 1, scale: 1, x: 0, filter: "blur(0px)" },
           inactive: { opacity: 0, scale: 1.08, x: 60, filter: "blur(10px)" }
+        };
+      case "swipe":
+        return {
+          duration: 0.9,
+          active: { opacity: 1, x: 0, filter: "blur(0px)" },
+          inactive: { opacity: 0, x: 80, filter: "blur(8px)" }
         };
       case "country":
         return {
