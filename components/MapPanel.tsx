@@ -159,11 +159,12 @@ export default function MapPanel({
       return;
     }
 
-    if (spot.placeId) {
+    const placeId = spot.placeId;
+    if (placeId) {
       await new Promise<void>((resolve, reject) => {
         placesServiceRef.current?.getDetails(
           {
-            placeId: spot.placeId,
+            placeId,
             fields: ["geometry", "place_id"]
           },
           (place, status) => {
@@ -332,7 +333,7 @@ export default function MapPanel({
             ? { placeId: destination.placeId }
             : { lat: destination.lat ?? 0, lng: destination.lng ?? 0 },
         waypoints,
-        travelMode
+        travelMode: google.maps.TravelMode[travelMode]
       },
       (result, status) => {
         if (status !== google.maps.DirectionsStatus.OK || !result) {

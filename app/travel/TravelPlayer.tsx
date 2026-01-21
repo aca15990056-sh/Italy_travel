@@ -14,6 +14,7 @@ const FALLBACK_BGM_URL =
   "https://assets.mixkit.co/music/preview/mixkit-forest-trek-117.mp3";
 
 type Layer = "A" | "B";
+type TransitionType = "default" | "country" | "transfer";
 
 export default function TravelPlayer() {
   const prefersReducedMotion = useReducedMotion();
@@ -38,6 +39,9 @@ export default function TravelPlayer() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [bgmError, setBgmError] = useState<string | null>(null);
   const [bgmSrc, setBgmSrc] = useState("/audio/bgm.mp3");
+  const [transitionType, setTransitionType] = useState<TransitionType>("default");
+  const [preloadedIndex, setPreloadedIndex] = useState<number | null>(null);
+  const [preloadedReady, setPreloadedReady] = useState(false);
 
   const activeClip = clips[activeIndex];
 
@@ -87,7 +91,48 @@ export default function TravelPlayer() {
     setClipProgress(0);
     setClipDuration(0);
     setTextVisible(false);
+    setPreloadedReady(false);
+    setPreloadedIndex(null);
   }, []);
+
+  const getTransitionType = useCallback(
+    (currentIndex: number, targetIndex: number): TransitionType => {
+      const current = clips[currentIndex];
+      const next = clips[targetIndex];
+      if (!current || !next) return "default";
+      if (current.theme === "intro" || next.theme === "outro") return "default";
+      if (next.theme === "transfer") return "transfer";
+      if (current.country !== next.country || current.city !== next.city) return "country";
+      return "default";
+    },
+    []
+  );
+
+  const swapToIndex = useCallback(
+    (targetIndex: number, activeVideo: HTMLVideoElement, inactiveVideo: HTMLVideoElement) => {
+      const nextLayer: Layer = activeLayer === "A" ? "B" : "A";
+      setTransitionType(getTransitionType(activeIndex, targetIndex));
+
+      if (isPlaying) {
+        inactiveVideo.play().catch(() => {
+          setIsPlaying(false);
+        });
+      }
+
+      setActiveLayer(nextLayer);
+      setActiveIndex(targetIndex);
+
+      if (transitionTimeoutRef.current) {
+        window.clearTimeout(transitionTimeoutRef.current);
+      }
+
+      transitionTimeoutRef.current = window.setTimeout(() => {
+        activeVideo.pause();
+        transitionTimeoutRef.current = null;
+      }, TRANSITION_MS);
+    },
+    [activeIndex, activeLayer, getTransitionType, isPlaying]
+  );
 
   const fadeAudioTo = useCallback(
     (target: number, durationMs: number, pauseAfter = false) => {
@@ -133,27 +178,11 @@ export default function TravelPlayer() {
       inactiveVideo.muted = isMuted;
       inactiveVideo.playbackRate = playbackRate;
       inactiveVideo.load();
+      setTransitionType(getTransitionType(activeIndex, targetIndex));
 
       const handleCanPlay = () => {
         inactiveVideo.removeEventListener("canplay", handleCanPlay);
-        if (isPlaying) {
-          inactiveVideo.play().catch(() => {
-            setIsPlaying(false);
-          });
-        }
-
-        const nextLayer: Layer = activeLayer === "A" ? "B" : "A";
-        setActiveLayer(nextLayer);
-        setActiveIndex(targetIndex);
-
-        if (transitionTimeoutRef.current) {
-          window.clearTimeout(transitionTimeoutRef.current);
-        }
-
-        transitionTimeoutRef.current = window.setTimeout(() => {
-          activeVideo.pause();
-          transitionTimeoutRef.current = null;
-        }, TRANSITION_MS);
+        swapToIndex(targetIndex, activeVideo, inactiveVideo);
       };
 
       inactiveVideo.addEventListener("canplay", handleCanPlay);
@@ -161,12 +190,14 @@ export default function TravelPlayer() {
     [
       activeIndex,
       activeLayer,
+      getTransitionType,
       getActiveVideo,
       getInactiveVideo,
       isMuted,
       isPlaying,
       playbackRate,
-      resetTimers
+      resetTimers,
+      swapToIndex
     ]
   );
 
@@ -254,9 +285,21 @@ export default function TravelPlayer() {
       setClipProgress(duration ? current / duration : 0);
       const isVisible = current > 0.4 && duration - current > 0.4;
       setTextVisible(isVisible);
-      if (duration && current >= duration - 0.05 && !endGuardRef.current) {
+      const nextIndex = (activeIndex + 1) % clips.length;
+      if (
+        duration &&
+        current >= duration - TRANSITION_MS / 1000 &&
+        preloadedReady &&
+        preloadedIndex === nextIndex &&
+        !endGuardRef.current
+      ) {
         endGuardRef.current = true;
-        handleNext();
+        const inactiveVideo = getInactiveVideo();
+        if (inactiveVideo) {
+          swapToIndex(nextIndex, activeVideo, inactiveVideo);
+        } else {
+          handleNext();
+        }
       }
     };
 
@@ -286,7 +329,16 @@ export default function TravelPlayer() {
       activeVideo.removeEventListener("error", handleError);
       endGuardRef.current = false;
     };
-  }, [activeIndex, activeLayer, getActiveVideo, handleNext]);
+  }, [
+    activeIndex,
+    activeLayer,
+    getActiveVideo,
+    getInactiveVideo,
+    handleNext,
+    preloadedIndex,
+    preloadedReady,
+    swapToIndex
+  ]);
 
   const hasInitializedRef = useRef(false);
 
@@ -326,6 +378,26 @@ export default function TravelPlayer() {
   }, []);
 
   useEffect(() => {
+    const inactiveVideo = getInactiveVideo();
+    if (!inactiveVideo) return;
+    const nextIndex = (activeIndex + 1) % clips.length;
+    inactiveVideo.src = clips[nextIndex].videoSrc;
+    inactiveVideo.muted = isMuted;
+    inactiveVideo.playbackRate = playbackRate;
+    inactiveVideo.load();
+
+    const handleCanPlay = () => {
+      setPreloadedIndex(nextIndex);
+      setPreloadedReady(true);
+    };
+
+    inactiveVideo.addEventListener("canplay", handleCanPlay);
+    return () => {
+      inactiveVideo.removeEventListener("canplay", handleCanPlay);
+    };
+  }, [activeIndex, getInactiveVideo, isMuted, playbackRate]);
+
+  useEffect(() => {
     let mounted = true;
     fetch("/audio/bgm.mp3", { method: "HEAD" })
       .then((response) => {
@@ -346,7 +418,7 @@ export default function TravelPlayer() {
   const overlayText = useMemo(() => {
     return (
       <motion.div
-        className="pointer-events-none absolute inset-0 z-20 flex flex-col items-end justify-end gap-2 px-8 pb-32 text-right text-white"
+        className="pointer-events-none absolute inset-0 z-20 flex flex-col items-end justify-end gap-2 px-8 pb-36 text-right text-white"
         style={{
           color: "#FFFFFF",
           textShadow: "0 4px 16px rgba(0,0,0,0.8)"
@@ -371,6 +443,36 @@ export default function TravelPlayer() {
     );
   }, [activeClip, prefersReducedMotion, textVisible]);
 
+  const transitionPreset = useMemo(() => {
+    if (prefersReducedMotion) {
+      return {
+        duration: TRANSITION_MS / 1000,
+        active: { opacity: 1 },
+        inactive: { opacity: 0 }
+      };
+    }
+    switch (transitionType) {
+      case "transfer":
+        return {
+          duration: 0.9,
+          active: { opacity: 1, scale: 1, x: 0, filter: "blur(0px)" },
+          inactive: { opacity: 0, scale: 1.08, x: 60, filter: "blur(10px)" }
+        };
+      case "country":
+        return {
+          duration: 0.8,
+          active: { opacity: 1, scale: 1, y: 0, filter: "blur(0px)" },
+          inactive: { opacity: 0, scale: 0.98, y: -20, filter: "blur(8px)" }
+        };
+      default:
+        return {
+          duration: TRANSITION_MS / 1000,
+          active: { opacity: 1, scale: 1, filter: "blur(0px)" },
+          inactive: { opacity: 0, scale: 1, filter: "blur(6px)" }
+        };
+    }
+  }, [prefersReducedMotion, transitionType]);
+
   return (
     <div className={`relative h-screen w-screen overflow-hidden bg-black ${pretendardBoldClass}`}>
       <style jsx global>
@@ -379,11 +481,8 @@ export default function TravelPlayer() {
       <div className="absolute inset-0">
         <motion.div
           className="absolute inset-0"
-          animate={{
-            opacity: activeLayer === "A" ? 1 : 0,
-            filter: prefersReducedMotion ? "blur(0px)" : activeLayer === "A" ? "blur(0px)" : "blur(6px)"
-          }}
-          transition={{ duration: TRANSITION_MS / 1000 }}
+          animate={activeLayer === "A" ? transitionPreset.active : transitionPreset.inactive}
+          transition={{ duration: transitionPreset.duration, ease: "easeOut" }}
         >
           <video
             ref={videoARef}
@@ -396,11 +495,8 @@ export default function TravelPlayer() {
         </motion.div>
         <motion.div
           className="absolute inset-0"
-          animate={{
-            opacity: activeLayer === "B" ? 1 : 0,
-            filter: prefersReducedMotion ? "blur(0px)" : activeLayer === "B" ? "blur(0px)" : "blur(6px)"
-          }}
-          transition={{ duration: TRANSITION_MS / 1000 }}
+          animate={activeLayer === "B" ? transitionPreset.active : transitionPreset.inactive}
+          transition={{ duration: transitionPreset.duration, ease: "easeOut" }}
         >
           <video
             ref={videoBRef}

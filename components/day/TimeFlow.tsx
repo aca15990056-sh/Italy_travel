@@ -39,7 +39,7 @@ function TimeDot({
 }
 
 export default function TimeFlow({ items, progress }: TimeFlowProps) {
-  const shouldReduceMotion = useReducedMotion();
+  const shouldReduceMotion = Boolean(useReducedMotion());
   const pathLength = useTransform(progress, [0.15, 0.6], [0, 1]);
 
   return (
