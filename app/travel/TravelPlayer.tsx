@@ -203,9 +203,14 @@ export default function TravelPlayer() {
   );
 
   const handleNext = useCallback(() => {
-    const nextIndex = (activeIndex + 1) % clips.length;
+    const nextIndex = activeIndex + 1;
+    if (nextIndex >= clips.length) {
+      pauseActive();
+      setIsPlaying(false);
+      return;
+    }
     queueClip(nextIndex);
-  }, [activeIndex, queueClip]);
+  }, [activeIndex, pauseActive, queueClip]);
 
   const handlePrev = useCallback(() => {
     const prevIndex = (activeIndex - 1 + clips.length) % clips.length;
@@ -319,10 +324,11 @@ export default function TravelPlayer() {
       setClipProgress(duration ? current / duration : 0);
       const isVisible = current > 0.4 && duration - current > 0.4;
       setTextVisible(isVisible);
-      const nextIndex = (activeIndex + 1) % clips.length;
+      const nextIndex = activeIndex + 1;
       if (
         duration &&
         current >= duration - TRANSITION_MS / 1000 &&
+        nextIndex < clips.length &&
         preloadedReady &&
         preloadedIndex === nextIndex &&
         !endGuardRef.current
@@ -344,6 +350,11 @@ export default function TravelPlayer() {
 
     const handleEnded = () => {
       endGuardRef.current = true;
+      if (activeIndex + 1 >= clips.length) {
+        pauseActive();
+        setIsPlaying(false);
+        return;
+      }
       handleNext();
     };
 
@@ -414,7 +425,12 @@ export default function TravelPlayer() {
   useEffect(() => {
     const inactiveVideo = getInactiveVideo();
     if (!inactiveVideo) return;
-    const nextIndex = (activeIndex + 1) % clips.length;
+    const nextIndex = activeIndex + 1;
+    if (nextIndex >= clips.length) {
+      setPreloadedIndex(null);
+      setPreloadedReady(false);
+      return;
+    }
     inactiveVideo.src = clips[nextIndex].videoSrc;
     inactiveVideo.muted = isMuted;
     inactiveVideo.playbackRate = playbackRate;
