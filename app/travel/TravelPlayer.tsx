@@ -212,6 +212,39 @@ export default function TravelPlayer() {
     queueClip(prevIndex);
   }, [activeIndex, queueClip]);
 
+  const handleJump = useCallback(
+    (targetIndex: number) => {
+      if (!hasStarted) {
+        setHasStarted(true);
+      }
+
+      if (!isPlaying) {
+        setIsPlaying(true);
+      }
+
+      if (targetIndex === activeIndex) {
+        playActive();
+      } else {
+        queueClip(targetIndex);
+      }
+
+      if (bgmEnabled && audioRef.current) {
+        audioRef.current.play().catch(() => null);
+        fadeAudioTo(volume, 500);
+      }
+    },
+    [
+      activeIndex,
+      bgmEnabled,
+      fadeAudioTo,
+      hasStarted,
+      isPlaying,
+      playActive,
+      queueClip,
+      volume
+    ]
+  );
+
   const handleStart = useCallback(() => {
     setHasStarted(true);
     setIsPlaying(true);
@@ -539,7 +572,7 @@ export default function TravelPlayer() {
           <button
             key={clip.id}
             type="button"
-            onClick={() => queueClip(index)}
+            onClick={() => handleJump(index)}
             className={`flex h-7 w-7 items-center justify-center rounded-full border text-xs ${
               index === activeIndex
                 ? "border-white bg-white/20 text-white"

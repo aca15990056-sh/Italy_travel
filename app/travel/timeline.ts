@@ -45,14 +45,14 @@ export const clips: Clip[] = [
     theme: "rome"
   },
   {
-    id: "last-supper",
-    dayLabel: "Day 3",
-    title: "고요한 벽화",
+    id: "como-lake",
+    dayLabel: "Day 10",
+    title: "호수의 여백",
     country: "Italy",
-    city: "Milan",
-    landmark: "The Last Supper",
-    subtitle: "레오나르도의 시간에 머물다",
-    videoSrc: "/swtal_s/video/03-last-supper-milan.mp4",
+    city: "Como",
+    landmark: "Lake Como",
+    subtitle: "잔잔한 풍경으로 숨 고르기",
+    videoSrc: "/swtal_s/video/10-como-lake.mp4",
     theme: "milan"
   },
   {
@@ -122,14 +122,14 @@ export const clips: Clip[] = [
     theme: "venice"
   },
   {
-    id: "como-lake",
-    dayLabel: "Day 10",
-    title: "호수의 여백",
+    id: "last-supper",
+    dayLabel: "Day 3",
+    title: "고요한 벽화",
     country: "Italy",
-    city: "Como",
-    landmark: "Lake Como",
-    subtitle: "잔잔한 풍경으로 숨 고르기",
-    videoSrc: "/swtal_s/video/10-como-lake.mp4",
+    city: "Milan",
+    landmark: "The Last Supper",
+    subtitle: "레오나르도의 시간에 머물다",
+    videoSrc: "/swtal_s/video/03-last-supper-milan.mp4",
     theme: "milan"
   },
   {
